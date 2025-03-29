@@ -4,16 +4,63 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + TS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Anton&display=swap"
+      rel="stylesheet"
+    />
+    <title>City Simulator</title>
   </head>
   <body>
     <div id="app">
+      <div class="title-bar">
+        <div class="title-bar__item">$<span id="money-amount"></span></div>
+        <div class="title-bar__item">My City</div>
+        <div class="title-bar__item">
+          Population: <span id="population-number">0</span>
+        </div>
+      </div>
       <div class="toolbar" id="toolbar">
-        <button id="bulldoze-btn" class="ui-button selected">BULLDOZE</button>
-        <button id="residential-btn" class="ui-button">RESIDENTIAL</button>
-        <button id="commercial-btn" class="ui-button">COMMERCIAL</button>
-        <button id="industrial-btn" class="ui-button">INDUSTRIAL</button>
-        <button id="road-btn" class="ui-button">ROAD</button>
+        <button id="select-btn" class="ui-button selected">
+          <img src="/icons/pointer.png" />
+        </button>
+        <button id="bulldoze-btn" class="ui-button">
+          <img src="/icons/bulldozer.png" />
+        </button>
+        <button id="residential-btn" class="ui-button">
+          <img src="/icons/residential.png" />
+        </button>
+        <button id="commercial-btn" class="ui-button">
+          <img src="/icons/shop.png" />
+        </button>
+        <button id="industrial-btn" class="ui-button">
+          <img src="/icons/factory.png" />
+        </button>
+        <button id="road-btn" class="ui-button">
+          <img src="/icons/road.png" />
+        </button>
+        <button id="pause-btn" class="ui-button">
+          <img src="/icons/pause.png" />
+        </button>
+      </div>
+    </div>
+
+    <div class="info-block hidden" id="info-block">
+      <div>
+        <h5>Tile info</h5>
+
+        <span id="tile-info"></span>
+      </div>
+      <div id="building-info-block">
+        <h5>Building</h5>
+
+        <span id="building-info"></span>
+      </div>
+      <div id="residents-info-block">
+        <h5>Residents</h5>
+
+        <span id="residents-info"></span>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>

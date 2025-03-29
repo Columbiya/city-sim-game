@@ -1,119 +1,109 @@
 import * as THREE from "three";
 import { BaseBuilding } from "./models/BaseBuilding";
 import { Road } from "./models/Road";
+import { GLTF, GLTFLoader } from "three/examples/jsm/Addons.js";
+import { models as modelPaths } from "./assets/models";
 import { Grass } from "./models/Grass";
 
-const geometry = new THREE.BoxGeometry(1, 1, 1);
-const loader = new THREE.TextureLoader();
-
 export class AssetsFactory {
+  private textureLoader = new THREE.TextureLoader();
+  private gltfLoader = new GLTFLoader();
   private textures = {
-    grass: this.loadTexture("grass.png"),
-    commercial1: this.loadTexture("commercial-1.png"),
-    commercial2: this.loadTexture("commercial-2.png"),
-    commercial3: this.loadTexture("commercial-3.png"),
-    industrial1: this.loadTexture("industrial-1.png"),
-    industrial2: this.loadTexture("industrial-2.png"),
-    industrial3: this.loadTexture("industrial-3.png"),
-    residential1: this.loadTexture("residential-1.png"),
-    residential2: this.loadTexture("residential-2.png"),
-    residential3: this.loadTexture("residential-3.png"),
+    base: this.loadTexture(`textures/base.png`),
+    specular: this.loadTexture(`textures/specular.png`),
+    grid: this.loadTexture("textures/grid.png"),
+    grass: this.loadTexture("/grass.png"),
   };
+  private loadedModelCount = 0;
+  private modelCount = 0;
 
-  private loadTexture(url: string) {
-    const tex = loader.load(url);
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(1, 1);
-    return tex;
-  }
-  private getTopMaterial() {
-    return new THREE.MeshLambertMaterial({ color: 0x555555 });
-  }
-  private getSideMaterial(textureName: keyof typeof this.textures) {
-    return new THREE.MeshLambertMaterial({
-      map: this.textures[textureName].clone(),
-    });
-  }
-  private createGrass(x: number, y: number) {
-    const material = new THREE.MeshLambertMaterial({
-      map: this.textures.grass,
-    });
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.userData = { type: "grass", x, y };
-    mesh.position.set(x, -0.5, y);
-    mesh.receiveShadow = true;
-    return mesh;
-  }
-  private createBuilding(x: number, y: number, data: BaseBuilding) {
-    return this.createMeshWithTextures(x, y, data);
-  }
-  private createResidential(x: number, y: number, data: BaseBuilding) {
-    return this.createMeshWithTextures(x, y, data);
-  }
-  private createCommercial(x: number, y: number, data: BaseBuilding) {
-    return this.createMeshWithTextures(x, y, data);
-  }
-  private createIndustrial(x: number, y: number, data: BaseBuilding) {
-    return this.createMeshWithTextures(x, y, data);
-  }
-  private createRoad(x: number, y: number) {
-    const m = new THREE.MeshLambertMaterial({ color: 0x222222 });
-    const mesh = new THREE.Mesh(geometry, m);
-    mesh.userData = { type: "road", x, y };
-    mesh.scale.set(1, 0.02, 1);
-    mesh.position.set(x, 0.01, y);
-    mesh.receiveShadow = true;
-    return mesh;
+  private models: Record<
+    keyof typeof modelPaths,
+    THREE.Group<THREE.Object3DEventMap>
+  >;
+
+  constructor(private onLoad: () => void) {
+    this.modelCount = Object.keys(modelPaths).length;
+    this.loadModels();
+    this.models = {} as Record<
+      keyof typeof modelPaths,
+      THREE.Group<THREE.Object3DEventMap>
+    >;
   }
 
-  private createMeshWithTextures(x: number, y: number, data: BaseBuilding) {
-    const textureName = (data.type + data.style) as keyof typeof this.textures;
-
-    const topMaterial = this.getTopMaterial();
-    const sideMaterial = this.getSideMaterial(textureName);
-    const materialsArray = [
-      sideMaterial, // +X
-      sideMaterial, // -X
-      topMaterial, // +Y
-      topMaterial, // -Y
-      sideMaterial, // +Z
-      sideMaterial, // -Z
-    ];
-
-    const mesh = new THREE.Mesh(geometry, materialsArray);
-    mesh.userData = { model: data, x, y };
-    mesh.scale.set(0.8, (data.height - 0.95) / 2, 0.8);
-    mesh.material.forEach((m) => m.map?.repeat.set(1, data.height - 1));
-    mesh.position.set(x, (data.height - 0.95) / 4, y);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-
-    return mesh;
-  }
-
-  createAsset<T extends BaseBuilding | Road | Grass>(
-    building: T,
-    x: number,
-    y: number,
-    buildingData: T["type"] extends "grass" | "road" ? undefined : BaseBuilding
-  ): THREE.Mesh {
-    switch (building.type) {
-      case "grass":
-        return this.createGrass(x, y);
-      case "building":
-        return this.createBuilding(x, y, buildingData!);
-      case "commercial":
-        return this.createCommercial(x, y, buildingData!);
-      case "industrial":
-        return this.createIndustrial(x, y, buildingData!);
-      case "residential":
-        return this.createResidential(x, y, buildingData!);
-      case "road":
-        return this.createRoad(x, y);
-      default:
-        console.log("Unknown asset type:", building);
-        return new THREE.Mesh();
+  private loadModel(
+    name: keyof typeof modelPaths,
+    {
+      filename,
+      scale = 1,
+      rotation = 0,
+      receiveShadow = true,
+      castShadow = true,
+    }: {
+      filename: string;
+      scale: number;
+      rotation: number;
+      receiveShadow: boolean;
+      castShadow: boolean;
     }
+  ) {
+    this.gltfLoader.load(`/models/${filename}`, (glb) => {
+      let mesh = glb.scene;
+
+      mesh.name = filename;
+
+      mesh.traverse((obj) => {
+        if (obj.material) {
+          obj.material = new THREE.MeshLambertMaterial({
+            map: this.textures.base,
+            specularMap: this.textures.specular,
+          });
+          obj.receiveShadow = receiveShadow;
+          obj.castShadow = castShadow;
+        }
+      });
+
+      mesh.rotation.set(0, THREE.MathUtils.degToRad(rotation), 0);
+      mesh.scale.set(scale / 30, scale / 30, scale / 30);
+
+      this.models[name] = mesh;
+
+      // Once all models are loaded
+      this.loadedModelCount++;
+      if (this.loadedModelCount == this.modelCount) {
+        this.onLoad();
+      }
+    });
+  }
+
+  private loadModels() {
+    for (const [name, meta] of Object.entries(modelPaths)) {
+      this.loadModel(name as keyof typeof modelPaths, meta);
+    }
+  }
+
+  getModel(
+    name: keyof typeof modelPaths,
+    simObject: BaseBuilding | Road | Grass,
+    transparent = false
+  ) {
+    const mesh = this.models[name].clone();
+
+    mesh.traverse((obj) => {
+      obj.userData = simObject;
+      if (obj.material) {
+        obj.material = obj.material.clone();
+        obj.material.transparent = transparent;
+      }
+    });
+
+    return mesh;
+  }
+
+  private loadTexture(url: string, flipY = false) {
+    const texture = this.textureLoader.load(url);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.flipY = flipY;
+    return texture;
   }
 }

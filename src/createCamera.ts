@@ -7,10 +7,9 @@ import {
   RIGHT_MOUSE_BUTTON,
   Y_AXIS,
 } from "./constants";
+import { DEG2RAD } from "./constants";
 
 export function createCamera() {
-  const DEG2RAD = Math.PI / 180;
-
   const camera = new THREE.PerspectiveCamera(
     75,
     window.innerWidth / window.innerHeight,
@@ -23,9 +22,9 @@ export function createCamera() {
   let cameraAzimuth = 135;
   let cameraElevation = 45;
 
-  let isLeftMouseDown = false;
-  let isRightMouseDown = false;
-  let isMiddleMouseDown = false;
+  let isRotating = false;
+  let isZooming = false;
+  let isPanning = false;
 
   let prevMouseX = 0;
   let prevMouseY = 0;
@@ -38,12 +37,15 @@ export function createCamera() {
 
     event.preventDefault();
 
-    if (event.button === LEFT_MOUSE_BUTTON) {
-      isLeftMouseDown = true;
+    if (
+      event.button === RIGHT_MOUSE_BUTTON &&
+      (event.altKey || event.shiftKey)
+    ) {
+      isZooming = true;
     } else if (event.button === RIGHT_MOUSE_BUTTON) {
-      isRightMouseDown = true;
+      isRotating = true;
     } else if (event.button === MIDDLE_MOUSE_BUTTON) {
-      isMiddleMouseDown = true;
+      isPanning = true;
     }
   }
 
@@ -57,7 +59,7 @@ export function createCamera() {
     const dy = event.clientY - prevMouseY;
 
     // handles the rotation of the camera
-    if (isLeftMouseDown) {
+    if (isRotating) {
       cameraAzimuth += dx * 0.5;
       cameraElevation += dy * 0.5;
       cameraElevation = Math.min(90, Math.max(0, cameraElevation));
@@ -66,7 +68,7 @@ export function createCamera() {
     }
 
     // handles the panning of the camera
-    if (isMiddleMouseDown) {
+    if (isPanning) {
       const forward = new THREE.Vector3(0, 0, 1).applyAxisAngle(
         Y_AXIS,
         cameraAzimuth * DEG2RAD
@@ -82,7 +84,7 @@ export function createCamera() {
     }
 
     // handles the zoom of the camera
-    if (isRightMouseDown) {
+    if (isZooming) {
       cameraRadius += dy * 0.02;
       cameraRadius = Math.min(
         MAX_CAMERA_RADIUS,
@@ -112,12 +114,15 @@ export function createCamera() {
   }
 
   function onMouseUp(event: MouseEvent) {
-    if (event.button === LEFT_MOUSE_BUTTON) {
-      isLeftMouseDown = false;
+    if (
+      event.button === RIGHT_MOUSE_BUTTON &&
+      (event.altKey || event.shiftKey)
+    ) {
+      isZooming = false;
     } else if (event.button === RIGHT_MOUSE_BUTTON) {
-      isRightMouseDown = false;
+      isRotating = false;
     } else if (event.button === MIDDLE_MOUSE_BUTTON) {
-      isMiddleMouseDown = false;
+      isPanning = false;
     }
   }
 

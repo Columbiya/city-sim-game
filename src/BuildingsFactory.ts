@@ -6,18 +6,18 @@ import { Road } from "./models/Road";
 import { Buildings } from "./types/Building";
 
 export class BuildingsFactory {
-  createBuilding(type: Buildings) {
+  createBuilding(type: Buildings, x: number, y: number) {
     switch (type) {
       case "building":
-        return new BaseBuilding();
+        return new BaseBuilding(x, y);
       case "commercial":
-        return new CommercialBuilding();
+        return new CommercialBuilding(x, y);
       case "industrial":
-        return new IndustrialBuilding();
+        return new IndustrialBuilding(x, y);
       case "residential":
-        return new ResidentialBuilding();
+        return new ResidentialBuilding(x, y);
       case "road":
-        return new Road();
+        return new Road(x, y);
       default:
         throw new Error("The typed passed in the method is not supported");
     }

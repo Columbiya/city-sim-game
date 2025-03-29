@@ -1,159 +1,231 @@
 import * as THREE from "three";
-import { createCamera } from "./createCamera";
-import { City } from "./types/City";
 import { AssetsFactory } from "./AssetsFactory";
-import { isGrowable } from "./isGrowable";
+import { City } from "./City";
+import { BaseBuilding } from "./models/BaseBuilding";
+import { getBuildingType } from "./helpers/getBuildingType";
+import { Road } from "./models/Road";
 
-export function createScene() {
-  const { camera, onMouseDown, onMouseMove, onMouseUp, onTouchDown } =
-    createCamera();
+const SELECTED_COLOR = 0xaaaa55;
+const HIGHLIGHTED_COLOR = 0x555555;
 
-  const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x777777);
+export class Scene {
+  private scene = new THREE.Scene();
+  private assetsFactory = new AssetsFactory(this.onLoad.bind(this));
 
-  const assetsFactory = new AssetsFactory();
+  private raycaster = new THREE.Raycaster();
+  private renderer = new THREE.WebGLRenderer({ alpha: true });
+  private mouse = new THREE.Vector2();
 
-  const renderer = new THREE.WebGLRenderer();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setClearColor(0x000000, 0);
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.setAnimationLoop(() => renderer.render(scene, camera));
-  document.body.appendChild(renderer.domElement);
+  private isLoading = true;
+  private lastRaycast: number = -1;
 
-  const raycaster = new THREE.Raycaster();
-  const mouse = new THREE.Vector2();
-  let selectedObject: THREE.Object3D<THREE.Object3DEventMap> | undefined =
+  private selectedObject: THREE.Object3D<THREE.Object3DEventMap> | undefined =
+    undefined;
+  private hoverObject: THREE.Object3D<THREE.Object3DEventMap> | undefined =
     undefined;
 
-  let terrain: THREE.Mesh[][] = [];
-  let buildings: (THREE.Mesh | undefined)[][] = [];
+  private terrain: THREE.Group<THREE.Object3DEventMap>[][] = [];
+  private buildings: (THREE.Group<THREE.Object3DEventMap> | undefined)[][] = [];
 
-  let onObjectSelected:
-    | ((object: THREE.Object3D<THREE.Object3DEventMap> | undefined) => void)
-    | undefined = undefined;
+  constructor(private camera: THREE.Camera, private gameOnLoad: () => void) {
+    if (!this.isLoading) {
+      this.setup();
+    }
+  }
 
-  function initialize(city: City) {
-    scene.clear();
+  private onLoad() {
+    this.isLoading = false;
+
+    this.setup();
+    this.gameOnLoad();
+  }
+
+  private setup() {
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.setAnimationLoop(() =>
+      this.renderer?.render(this.scene, this.camera)
+    );
+    document.body.appendChild(this.renderer.domElement);
+  }
+
+  async initialize(instance: City) {
+    this.scene.clear();
+
+    const city = instance.data;
 
     for (let x = 0; x < city.length; x++) {
-      const column: THREE.Mesh[] = [];
+      const column: THREE.Group<THREE.Object3DEventMap>[] = [];
 
       for (let y = 0; y < city[x].length; y++) {
         const tile = city[x][y];
         // 1. Load the mesh / 3D object corresponding to the tile at (x, y) coordinates
         // 2. Add that mesh to the scene
 
-        // Grass geometry
         const terrain = tile.terrain;
-        const grass = assetsFactory.createAsset(terrain, x, y, undefined);
-        scene.add(grass);
+        const grass = this.assetsFactory.getModel("grass", terrain);
+        grass.receiveShadow = true;
+        grass.position.set(x, 0, y);
+        this.scene.add(grass);
         column.push(grass);
       }
 
-      terrain.push(column);
-      buildings.push(new Array(city.length).fill(undefined));
+      this.terrain.push(column);
+      this.buildings.push(new Array(city.length).fill(undefined));
     }
 
-    setupLights();
+    this.setupLights();
   }
 
-  function update(city: City) {
+  async updateScene(instance: City) {
+    const city = instance.data;
+
     for (let x = 0; x < city.length; x++) {
       for (let y = 0; y < city[x].length; y++) {
         const tile = city[x][y];
 
-        const buildingTypeOnTheScene = buildings[x][y];
+        const buildingTypeOnTheScene = this.buildings[x][y];
         const buildingTypeInTheDataModel = tile.building;
 
         if (!buildingTypeInTheDataModel && buildingTypeOnTheScene) {
-          scene.remove(buildingTypeOnTheScene);
-          buildings[x][y] = undefined;
-          console.log("buldozed");
-        } else if (buildingTypeInTheDataModel && !buildingTypeOnTheScene) {
-          const newBuilding = assetsFactory.createAsset(
-            buildingTypeInTheDataModel,
-            x,
-            y,
-            // @ts-ignore
-            buildingTypeInTheDataModel
-          );
-
-          newBuilding.position.set(x, 0.5, y);
-          buildings[x][y] = newBuilding;
-          scene.add(newBuilding);
+          this.scene.remove(buildingTypeOnTheScene);
+          this.buildings[x][y] = undefined;
         } else if (
-          buildingTypeOnTheScene &&
-          buildingTypeInTheDataModel &&
-          isGrowable(buildingTypeInTheDataModel) &&
-          buildingTypeOnTheScene?.userData.prevHeight !==
-            buildingTypeInTheDataModel.height
+          (!buildingTypeOnTheScene && buildingTypeInTheDataModel) ||
+          (buildingTypeInTheDataModel instanceof BaseBuilding &&
+            buildingTypeInTheDataModel?.needsUpdate)
         ) {
-          scene.remove(buildingTypeOnTheScene);
+          if (buildingTypeOnTheScene) {
+            this.scene.remove(buildingTypeOnTheScene);
+          }
 
-          const newBuilding = assetsFactory.createAsset(
-            buildingTypeInTheDataModel,
-            x,
-            y,
+          const newBuilding = this.assetsFactory.getModel(
+            getBuildingType(buildingTypeInTheDataModel),
             buildingTypeInTheDataModel
           );
-          buildings[x][y] = newBuilding;
-          scene.add(newBuilding);
+
+          newBuilding.position.set(x, 0.02, y);
+
+          this.buildings[x][y] = newBuilding;
+          this.scene.add(newBuilding);
+
+          if (buildingTypeInTheDataModel instanceof BaseBuilding) {
+            buildingTypeInTheDataModel.needsUpdate = false;
+          }
+
+          if (buildingTypeInTheDataModel instanceof Road) {
+            newBuilding.rotateY(buildingTypeInTheDataModel.rotation.y);
+          }
         }
       }
     }
   }
 
-  function setupLights() {
-    const sun = new THREE.DirectionalLight(0xffffff, 1);
-    sun.position.set(20, 20, 20);
-    sun.castShadow = true;
-    sun.shadow.camera.left = -10;
-    sun.shadow.camera.right = 10;
-    sun.shadow.camera.top = 0;
-    sun.shadow.mapSize.width = 1024;
-    sun.shadow.mapSize.height = 1024;
-    sun.shadow.camera.near = 0.5;
-    sun.shadow.camera.far = 50;
-
-    scene.add(sun);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+  setActiveObject(object: THREE.Object3D<THREE.Object3DEventMap>) {
+    this.selectedObject = object;
   }
 
-  function setObjectSelectedHandler(
-    handler: (_: THREE.Object3D<THREE.Object3DEventMap> | undefined) => void
-  ) {
-    onObjectSelected = handler;
+  setHoverObject(object: THREE.Object3D<THREE.Object3DEventMap>) {
+    this.hoverObject = object;
   }
 
-  function onMouseDownScene(e: MouseEvent) {
-    onMouseDown(e);
-
-    // look this up if you have no idea
-    // what this is
-    mouse.x = (e.clientX / renderer.domElement.clientWidth) * 2 - 1;
-    mouse.y = -(e.clientY / renderer.domElement.clientHeight) * 2 + 1;
-
-    raycaster.setFromCamera(mouse, camera);
-
-    let intersections = raycaster.intersectObjects(scene.children, false);
-
-    if (intersections.length) {
-      selectedObject = intersections[0].object;
-
-      if (onObjectSelected) {
-        onObjectSelected(selectedObject);
-      }
+  highlightSelected() {
+    if (this.selectedObject) {
+      this.highlightObject(SELECTED_COLOR, this.selectedObject);
     }
   }
 
-  return {
-    onMouseUp,
-    onTouchDown,
-    onMouseMove,
-    onMouseDown: onMouseDownScene,
-    initialize,
-    update,
-    setObjectSelectedHandler,
-  };
+  highlightHover(hoverObject: THREE.Object3D<THREE.Object3DEventMap>) {
+    if (this.hoverObject) {
+      this.dimObject(this.hoverObject);
+    }
+
+    this.highlightObject(HIGHLIGHTED_COLOR, hoverObject);
+  }
+
+  getActiveObject() {
+    return this.selectedObject;
+  }
+
+  private highlightObject(
+    color: number,
+    object: THREE.Object3D<THREE.Object3DEventMap>
+  ) {
+    // look into other ways to do it
+
+    if (object) {
+      const mesh = object as THREE.Mesh;
+      mesh.traverse((obj) => {
+        if (Array.isArray(obj.material)) {
+          obj.material?.forEach((m) => m.emissive?.setHex(color));
+        }
+        obj.material?.emissive?.setHex(color);
+      });
+    }
+  }
+
+  private dimObject(object: THREE.Object3D<THREE.Object3DEventMap>) {
+    // look into other ways to do it
+
+    if (object) {
+      const mesh = object as THREE.Mesh;
+      mesh.traverse((obj) => {
+        if (Array.isArray(obj.material)) {
+          obj.material?.forEach((m) => m.emissive?.setHex(0));
+        }
+
+        obj.material?.emissive?.setHex(0);
+      });
+    }
+  }
+
+  private setupLights() {
+    const sun = new THREE.DirectionalLight(0xffffff, 2);
+    sun.position.set(-10, 20, 0);
+    sun.castShadow = true;
+    sun.shadow.camera.left = -20;
+    sun.shadow.camera.right = 20;
+    sun.shadow.camera.top = 20;
+    sun.shadow.camera.bottom = -20;
+    sun.shadow.mapSize.width = 2048;
+    sun.shadow.mapSize.height = 2048;
+    sun.shadow.camera.near = 10;
+    sun.shadow.camera.far = 50;
+    sun.shadow.normalBias = 0.01;
+    this.scene.add(sun);
+    this.scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+  }
+
+  castRay(e: MouseEvent) {
+    if (Date.now() - this.lastRaycast < 1 / 20) return this.selectedObject;
+    // look this up if you have no idea
+    // what this is
+    this.mouse.x = (e.clientX / this.renderer.domElement.clientWidth) * 2 - 1;
+    this.mouse.y = -(e.clientY / this.renderer.domElement.clientHeight) * 2 + 1;
+
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+
+    // layers optimization
+
+    const intersections = this.raycaster.intersectObjects(
+      this.scene.children,
+      true
+    );
+
+    if (intersections.length) {
+      return intersections[0].object;
+    }
+  }
+
+  onMouseDown(e: MouseEvent) {
+    const clickedObject = this.castRay(e);
+
+    if (clickedObject) {
+      this.dimObject(clickedObject);
+      this.highlightObject(SELECTED_COLOR, clickedObject);
+    }
+
+    return clickedObject;
+  }
 }

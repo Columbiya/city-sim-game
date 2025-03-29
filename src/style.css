@@ -1,25 +1,45 @@
 html,
 body {
   margin: 0;
+  overflow: hidden;
+
+  background: linear-gradient(0deg, #2653a3, #60a2e3);
+
+  font-family: "Anton", sans-serif;
+  font-weight: 400;
+  font-style: normal;
 }
 .toolbar {
+  background: #f1f1f1;
+  border-radius: 24px;
   position: fixed;
-  top: 25px;
-  left: 25px;
+  top: 100px;
+  left: 15px;
 
-  padding: 15px;
+  box-shadow: 1px 1px 20px #ccc;
+
+  padding: 16px;
 
   display: flex;
   flex-direction: column;
   gap: 12px;
 
-  width: 250px;
+  width: 50px;
+}
+
+.toolbar img {
+  display: block;
+  width: 25px;
+  pointer-events: none;
 }
 
 .ui-button {
-  display: block;
-  background-color: black;
+  display: grid;
+  place-items: center;
+
+  background-color: #55558800;
   border: 1px solid black;
+  border-radius: 3px;
   color: lightgray;
   height: 40px;
   width: 100%;
@@ -34,4 +54,67 @@ body {
 
 .ui-button:not(.selected):hover {
   background-color: #33333355;
+}
+
+.title-bar {
+  position: fixed;
+
+  color: #fff;
+
+  top: 15px;
+  left: 50%;
+  transform: translate(-50%, 0);
+  height: 60px;
+
+  background-color: #347cc3;
+  border-radius: 40px;
+  box-shadow: 1px 10px 5px #2653a3;
+
+  font-size: 24px;
+
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  width: 90vw;
+}
+
+.info-block {
+  position: fixed;
+  top: 100px;
+  right: 15px;
+
+  width: 250px;
+
+  padding: 16px;
+  border-radius: 24px;
+  background-color: #f1f1f1;
+  box-shadow: 1px 1px 20px #ccc;
+
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.info-block h5 {
+  padding: 6px 0;
+
+  border-radius: 25px;
+  background-color: #347cc3;
+  color: #fff;
+
+  text-align: center;
+  text-transform: uppercase;
+
+  margin-top: 0;
+  margin-bottom: 8px;
+
+  font-size: 18px;
+}
+
+.info-block .subtitle {
+  color: #878f98;
+}
+
+.info-block .hidden {
+  display: none;
 }

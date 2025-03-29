@@ -3,4 +3,6 @@ export type Tools =
   | "residential-btn"
   | "bulldoze-btn"
   | "industrial-btn"
-  | "road-btn";
+  | "road-btn"
+  | "select-btn"
+  | "pause-btn";
