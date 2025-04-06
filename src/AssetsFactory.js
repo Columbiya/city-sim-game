@@ -1,50 +1,34 @@
 import * as THREE from "three";
-import { BaseBuilding } from "./models/BaseBuilding";
-import { Road } from "./models/Road";
-import { GLTF, GLTFLoader } from "three/examples/jsm/Addons.js";
+import { GLTFLoader } from "three/examples/jsm/Addons.js";
 import { models as modelPaths } from "./assets/models";
-import { Grass } from "./models/Grass";
 
 export class AssetsFactory {
-  private textureLoader = new THREE.TextureLoader();
-  private gltfLoader = new GLTFLoader();
-  private textures = {
+  textureLoader = new THREE.TextureLoader();
+  gltfLoader = new GLTFLoader();
+  textures = {
     base: this.loadTexture(`textures/base.png`),
     specular: this.loadTexture(`textures/specular.png`),
     grid: this.loadTexture("textures/grid.png"),
     grass: this.loadTexture("/grass.png"),
   };
-  private loadedModelCount = 0;
-  private modelCount = 0;
+  loadedModelCount = 0;
+  modelCount = 0;
 
-  private models: Record<
-    keyof typeof modelPaths,
-    THREE.Group<THREE.Object3DEventMap>
-  >;
-
-  constructor(private onLoad: () => void) {
+  constructor(onLoad) {
     this.modelCount = Object.keys(modelPaths).length;
     this.loadModels();
-    this.models = {} as Record<
-      keyof typeof modelPaths,
-      THREE.Group<THREE.Object3DEventMap>
-    >;
+    this.models = {};
+    this.onLoad = onLoad;
   }
 
-  private loadModel(
-    name: keyof typeof modelPaths,
+  loadModel(
+    name,
     {
       filename,
       scale = 1,
       rotation = 0,
       receiveShadow = true,
       castShadow = true,
-    }: {
-      filename: string;
-      scale: number;
-      rotation: number;
-      receiveShadow: boolean;
-      castShadow: boolean;
     }
   ) {
     this.gltfLoader.load(`/models/${filename}`, (glb) => {
@@ -76,17 +60,13 @@ export class AssetsFactory {
     });
   }
 
-  private loadModels() {
+  loadModels() {
     for (const [name, meta] of Object.entries(modelPaths)) {
-      this.loadModel(name as keyof typeof modelPaths, meta);
+      this.loadModel(name, meta);
     }
   }
 
-  getModel(
-    name: keyof typeof modelPaths,
-    simObject: BaseBuilding | Road | Grass,
-    transparent = false
-  ) {
+  getModel(name, simObject, transparent = false) {
     const mesh = this.models[name].clone();
 
     mesh.traverse((obj) => {
@@ -100,7 +80,7 @@ export class AssetsFactory {
     return mesh;
   }
 
-  private loadTexture(url: string, flipY = false) {
+  loadTexture(url, flipY = false) {
     const texture = this.textureLoader.load(url);
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.flipY = flipY;

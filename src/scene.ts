@@ -1,4 +1,5 @@
 import * as THREE from "three";
+// @ts-expect-error
 import { AssetsFactory } from "./AssetsFactory";
 import { City } from "./City";
 import { BaseBuilding } from "./models/BaseBuilding";
@@ -157,9 +158,12 @@ export class Scene {
     if (object) {
       const mesh = object as THREE.Mesh;
       mesh.traverse((obj) => {
+        // @ts-ignore
         if (Array.isArray(obj.material)) {
+          // @ts-ignore
           obj.material?.forEach((m) => m.emissive?.setHex(color));
         }
+        // @ts-ignore
         obj.material?.emissive?.setHex(color);
       });
     }
@@ -171,10 +175,13 @@ export class Scene {
     if (object) {
       const mesh = object as THREE.Mesh;
       mesh.traverse((obj) => {
+        // @ts-ignore
         if (Array.isArray(obj.material)) {
+          // @ts-ignore
           obj.material?.forEach((m) => m.emissive?.setHex(0));
         }
 
+        // @ts-ignore
         obj.material?.emissive?.setHex(0);
       });
     }

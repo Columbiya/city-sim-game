@@ -11,5 +11,6 @@ export function getBuildingType(building: Road | BaseBuilding): ModelKeys {
     return `${building.type}-${building.style}` as const;
   }
 
+  // @ts-expect-error
   return `${building.type}-${building.style}${building.height}` as const;
 }

@@ -7,7 +7,7 @@ import { BaseBuilding } from "./BaseBuilding";
 import type { ModelKeys } from "../types/Building";
 
 type RemoveRoadTypeFromModelKey<T extends ModelKeys> =
-  T extends `${infer BuildingType}-${infer ModelKey}` ? ModelKey : never;
+  T extends `${infer _}-${infer ModelKey}` ? ModelKey : never;
 
 type Style = RemoveRoadTypeFromModelKey<
   Extract<

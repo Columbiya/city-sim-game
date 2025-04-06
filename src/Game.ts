@@ -28,10 +28,10 @@ export class Game {
   private residentsInfo = document.querySelector("#residents-info")!;
 
   private scene: Scene;
+
+  // @ts-expect-error
   private camera: PerspectiveCamera;
   private city: City;
-
-  private isLoading = false;
 
   private simulationInterval: number = -1;
   private paused = false;
@@ -63,8 +63,6 @@ export class Game {
   }
 
   private onLoad() {
-    this.isLoading = false;
-
     this.setup();
   }
 

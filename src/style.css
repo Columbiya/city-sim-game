@@ -118,3 +118,19 @@ body {
 .info-block .hidden {
   display: none;
 }
+
+.controls {
+  background-color: #f1f1f1;
+  padding: 16px;
+  border-radius: 24px;
+
+  z-index: 5;
+  position: fixed;
+  bottom: 15px;
+  left: 15px;
+}
+
+.controls p {
+  margin: 4px;
+  font-size: 20px;
+}

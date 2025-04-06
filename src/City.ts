@@ -1,5 +1,4 @@
 import { isGrowable } from "./helpers/isGrowable";
-import { isJobProvidable } from "./helpers/isJobProvidable";
 import { isResidentialBuilding } from "./helpers/isResidentialBuilding";
 import { Citizen } from "./models/Citizen";
 import { Grass } from "./models/Grass";

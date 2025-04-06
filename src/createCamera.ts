@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import {
-  LEFT_MOUSE_BUTTON,
   MAX_CAMERA_RADIUS,
   MIDDLE_MOUSE_BUTTON,
   MIN_CAMERA_RADIUS,
